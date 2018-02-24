@@ -12,7 +12,7 @@ namespace GameServer
     class Program
     {
         private static string m_ServerIP = "127.0.0.1";
-        private static int m_Point = 111;
+        private static int m_Port = 111;
 
         private static Socket m_ServerSocket;
 
@@ -22,7 +22,7 @@ namespace GameServer
             m_ServerSocket = new Socket(AddressFamily.InterNetwork,SocketType.Stream,ProtocolType.Tcp);
 
             //向操作系统申请可用的IP和端口 用来通信
-            m_ServerSocket.Bind(new IPEndPoint(IPAddress.Parse(m_ServerIP),m_Point));
+            m_ServerSocket.Bind(new IPEndPoint(IPAddress.Parse(m_ServerIP),m_Port));
 
             //设置最多3000个排队连接请求
             m_ServerSocket.Listen(3000);
@@ -45,13 +45,11 @@ namespace GameServer
                 //接收客户端请求
                 Socket socket = m_ServerSocket.Accept();
 
-                Console.WriteLine("客户端{0}", socket.LocalEndPoint.ToString());
-
-                ClientSocket clientSocket = new ClientSocket(socket);
+                Console.WriteLine("客户端{0}已经连接", socket.RemoteEndPoint.ToString());
 
                 //一个角色相当于一个客户端
                 Role role = new Role();
-                role.Client_Socket = clientSocket;
+                ClientSocket clientSocket = new ClientSocket(socket,role);
 
                 //把角色添加到角色管理
                 RoleMgr.Instance.AllRole.Add(role);

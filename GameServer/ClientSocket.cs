@@ -14,6 +14,9 @@ namespace GameServer
     /// </summary>
     public class ClientSocket
     {
+        //所属角色
+        private Role m_Role;
+
         //客户端Socket
         private Socket m_Socket;
 
@@ -26,9 +29,11 @@ namespace GameServer
         //接收数据包的缓冲数据流
         private MMO_MemoryStream m_ReceiveMs = new MMO_MemoryStream();
 
-        public ClientSocket(Socket socket)
+        public ClientSocket(Socket socket,Role role)
         {
             m_Socket = socket;
+            m_Role = role;
+            m_Role.Client_Socket = this;
 
             //启动线程 进行数据接收
             m_ReveiveThread = new Thread(ReceiveMsg);
@@ -51,24 +56,40 @@ namespace GameServer
         /// <param name="ar"></param>
         private void ReceiveCallBack(IAsyncResult ar)
         {
-            int len = m_Socket.EndReceive(ar);
-            if(len > 0)
+            try
             {
-                //已经接收到数据
+                int len = m_Socket.EndReceive(ar);
+                if (len > 0)
+                {
+                    //已经接收到数据
 
-                //把接收到的数据 写入缓冲数据流的尾部
-                m_ReceiveMs.Position = m_ReceiveMs.Length;
+                    //把接收到的数据 写入缓冲数据流的尾部
+                    m_ReceiveMs.Position = m_ReceiveMs.Length;
 
-                //把指定长度的字节写入数据流
-                m_ReceiveMs.Write(m_ReceiveBuffer,0,len);
+                    //把指定长度的字节写入数据流
+                    m_ReceiveMs.Write(m_ReceiveBuffer, 0, len);
 
-                byte[] buffer = m_ReceiveMs.ToArray();
+                    byte[] buffer = m_ReceiveMs.ToArray();
+                }
+                else
+                {
+                    //说明客户端断开连接了
+                    Console.WriteLine("客户端{0}断开连接了", m_Socket.RemoteEndPoint.ToString());
+
+                    //将角色移除
+                    RoleMgr.Instance.AllRole.Remove(m_Role);
+                }
             }
-            else
+            catch (Exception)
             {
-                //没有接收到数据
+                //说明客户端断开连接了
+                Console.WriteLine("客户端{0}断开连接了", m_Socket.RemoteEndPoint.ToString());
 
+                //将角色移除
+                RoleMgr.Instance.AllRole.Remove(m_Role);
             }
+
+            
         }
     }
 }

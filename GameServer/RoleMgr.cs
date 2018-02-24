@@ -26,6 +26,7 @@ namespace GameServer
                         if (instance == null)
                         {
                             instance = new RoleMgr();
+                            
                         }
                     }
                 }
@@ -34,7 +35,7 @@ namespace GameServer
         }
         #endregion
 
-        private List<Role> m_AllRole;
+        private List<Role> m_AllRole = new List<Role>();
 
         public List<Role> AllRole
         {
