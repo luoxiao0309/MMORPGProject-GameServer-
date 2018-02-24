@@ -1,0 +1,7 @@
+D:\Github项目\MMORPGProject(GameServer)\GameServer\bin\Debug\GameServer.exe.config
+D:\Github项目\MMORPGProject(GameServer)\GameServer\bin\Debug\GameServer.exe
+D:\Github项目\MMORPGProject(GameServer)\GameServer\bin\Debug\GameServer.pdb
+D:\Github项目\MMORPGProject(GameServer)\GameServer\obj\Debug\GameServer.csprojResolveAssemblyReference.cache
+D:\Github项目\MMORPGProject(GameServer)\GameServer\obj\Debug\GameServer.csproj.CoreCompileInputs.cache
+D:\Github项目\MMORPGProject(GameServer)\GameServer\obj\Debug\GameServer.exe
+D:\Github项目\MMORPGProject(GameServer)\GameServer\obj\Debug\GameServer.pdb
