@@ -62,14 +62,91 @@ namespace GameServer
                 if (len > 0)
                 {
                     //已经接收到数据
-
                     //把接收到的数据 写入缓冲数据流的尾部
                     m_ReceiveMs.Position = m_ReceiveMs.Length;
 
                     //把指定长度的字节写入数据流
                     m_ReceiveMs.Write(m_ReceiveBuffer, 0, len);
 
-                    byte[] buffer = m_ReceiveMs.ToArray();
+                    //byte[] buffer = m_ReceiveMs.ToArray();
+
+                    //如果缓存数据流的长度 大于 2 说明至少有个不完整的包过来
+                    //我们客户端封装数据包 用的ushort 长度就是2
+                    if(m_ReceiveMs.Length > 2)
+                    {
+                        //循环拆分数据包
+                        while (true)
+                        {
+                            //把数据流指针位置放在0处
+                            m_ReceiveMs.Position = 0;
+
+                            //当前包体长度
+                            int currMsgLen = m_ReceiveMs.ReadUShort();
+
+                            //当前总包的长度
+                            int currFullMsgLen = 2 + currMsgLen;
+
+                            //如果数据流长度大于或等于总包长度 说明至少收到一个完整包
+                            if(m_ReceiveMs.Length >= currMsgLen)
+                            {
+                                //收到完整包
+                                byte[] buffer = new byte[currMsgLen];
+
+                                //把数据流指针放在包体位置
+                                m_ReceiveMs.Position = 2;
+
+                                //把包体读取到byte数组中
+                                m_ReceiveMs.Read(buffer, 0, currMsgLen);
+
+                                //这里的buffer就是我们拆分的数据包
+                                using (MMO_MemoryStream ms2 = new MMO_MemoryStream(buffer))
+                                {
+                                    string msg = ms2.ReadUTF8String();
+                                    Console.WriteLine("接收的消息是 "+msg);
+                                }
+
+                                //处理剩余字节长度
+                                int remainLen = (int)(m_ReceiveMs.Length - currFullMsgLen);
+                                if(remainLen > 0)
+                                {
+                                    //把指针放在第一个包的尾部
+                                    m_ReceiveMs.Position = currFullMsgLen;
+
+                                    //定义剩余字节数组
+                                    byte[] remainBuffer = new byte[remainLen];
+
+                                    //将数据流读取到剩余字节数组当中
+                                    m_ReceiveMs.Read(remainBuffer, 0, remainLen);
+
+                                    //清空数据流
+                                    m_ReceiveMs.Position = 0;
+                                    m_ReceiveMs.SetLength(0);
+
+                                    //将剩余字节数组重新写入数据流
+                                    m_ReceiveMs.Write(remainBuffer,0,remainBuffer.Length);
+
+                                    remainBuffer = null;
+                                }
+                                else
+                                {
+                                    //没有剩余字节
+                                    //清空数据流
+                                    m_ReceiveMs.Position = 0;
+                                    m_ReceiveMs.SetLength(0);
+
+                                    break;
+                                }
+                            }
+                            else
+                            {
+                                //还没有完整包
+                                break;
+                            }
+                        }
+                    }
+
+                    //进行下一次接收数据包
+                    m_Socket.BeginReceive(m_ReceiveBuffer, 0, m_ReceiveBuffer.Length, SocketFlags.None, ReceiveCallBack, m_Socket);
                 }
                 else
                 {
@@ -80,7 +157,7 @@ namespace GameServer
                     RoleMgr.Instance.AllRole.Remove(m_Role);
                 }
             }
-            catch (Exception)
+            catch
             {
                 //说明客户端断开连接了
                 Console.WriteLine("客户端{0}断开连接了", m_Socket.RemoteEndPoint.ToString());
