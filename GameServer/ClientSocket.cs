@@ -23,12 +23,28 @@ namespace GameServer
         //接收数据的线程
         private Thread m_ReveiveThread;
 
+        #region 接收消息所需的变量
         //接收数据包的字节数组缓冲区
         private byte[] m_ReceiveBuffer = new byte[10240];
 
         //接收数据包的缓冲数据流
         private MMO_MemoryStream m_ReceiveMs = new MMO_MemoryStream();
+        #endregion
 
+        #region 发送消息所需变量
+        //发送消息队列
+        private Queue<byte[]> m_SendQueue = new Queue<byte[]>();
+
+        //检查队列的委托
+        private Action m_CheckSendQueue;
+        #endregion
+
+
+        /// <summary>
+        /// 构造函数
+        /// </summary>
+        /// <param name="socket"></param>
+        /// <param name="role"></param>
         public ClientSocket(Socket socket,Role role)
         {
             m_Socket = socket;
@@ -38,18 +54,110 @@ namespace GameServer
             //启动线程 进行数据接收
             m_ReveiveThread = new Thread(ReceiveMsg);
             m_ReveiveThread.Start();
+
+            m_CheckSendQueue = OnCheckSendQueueCallBack;
+            
         }
 
+        #region OnCheckSendQueueCallBack  检查队列的委托回调
+        /// <summary>
+        /// 
+        /// </summary>
+        private void OnCheckSendQueueCallBack()
+        {
+            lock (m_SendQueue)
+            {
+                //如果队列中有数据包则发送数据包
+                if (m_SendQueue.Count > 0)
+                {
+                    //发送数据包
+                    Send(m_SendQueue.Dequeue());
+                }
+            }
+        }
+        #endregion
+
+        #region MakeData 封装数据包
+        /// <summary>
+        /// 封装数据包
+        /// </summary>
+        /// <param name="data"></param>
+        /// <returns></returns>
+        private byte[] MakeData(byte[] data)
+        {
+            byte[] retBuffer = null;
+            using (MMO_MemoryStream ms = new MMO_MemoryStream())
+            {
+                ms.WriteUShort((ushort)(data.Length));
+                ms.Write(data, 0, data.Length);
+                retBuffer = ms.ToArray();
+            }
+
+            return retBuffer;
+
+        }
+        #endregion
+
+        #region SendMsg 发送消息 将消息加入队列
+        /// <summary>
+        /// 发送消息
+        /// </summary>
+        /// <param name="buffer"></param>
+        public void SendMsg(byte[] buffer)
+        {
+            //得到封装后的数据包
+            byte[] sendBuffer = MakeData(buffer);
+
+            lock (m_SendQueue)
+            {
+                //将数据包加入队列
+                m_SendQueue.Enqueue(sendBuffer);
+
+                //启动委托（执行委托）
+                m_CheckSendQueue.BeginInvoke(null, null);
+            }
+        }
+        #endregion
+
+        #region Send 真正发送数据包到服务器
+        /// <summary>
+        /// 真正发送数据包到服务器
+        /// </summary>
+        /// <param name="buffer"></param>
+        private void Send(byte[] buffer)
+        {
+            m_Socket.BeginSend(buffer, 0, buffer.Length, SocketFlags.None, SendCallBack, m_Socket);
+        }
+        #endregion
+
+        #region SendCallBack 发送数据包的回调
+        /// <summary>
+        /// 发送数据包的回调
+        /// </summary>
+        /// <param name="ar"></param>
+        private void SendCallBack(IAsyncResult ar)
+        {
+            m_Socket.EndSend(ar);
+
+            //继续检查队列
+            OnCheckSendQueueCallBack();
+        }
+        #endregion
+
+        //========================================================================
+
+        #region ReceiveMsg 接收数据
         /// <summary>
         /// 接收数据
         /// </summary>
         private void ReceiveMsg()
         {
             //异步接收数据
-            m_Socket.BeginReceive(m_ReceiveBuffer,0,m_ReceiveBuffer.Length,SocketFlags.None,ReceiveCallBack,m_Socket);
+            m_Socket.BeginReceive(m_ReceiveBuffer, 0, m_ReceiveBuffer.Length, SocketFlags.None, ReceiveCallBack, m_Socket);
         }
+        #endregion
 
-
+        #region ReceiveCallBack 接收数据回调
         /// <summary>
         /// 接收数据回调
         /// </summary>
@@ -98,11 +206,19 @@ namespace GameServer
                                 //把包体读取到byte数组中
                                 m_ReceiveMs.Read(buffer, 0, currMsgLen);
 
+                                //temp
                                 //这里的buffer就是我们拆分的数据包
                                 using (MMO_MemoryStream ms2 = new MMO_MemoryStream(buffer))
                                 {
                                     string msg = ms2.ReadUTF8String();
                                     Console.WriteLine("接收的消息是 "+msg);
+                                }
+
+                                //temp
+                                using (MMO_MemoryStream ms = new MMO_MemoryStream())
+                                {
+                                    ms.WriteUTF8String(string.Format("服务器时间 " + DateTime.Now.ToString()));
+                                    this.SendMsg(ms.ToArray());
                                 }
 
                                 //处理剩余字节长度
@@ -168,5 +284,6 @@ namespace GameServer
 
             
         }
+        #endregion
     }
 }
