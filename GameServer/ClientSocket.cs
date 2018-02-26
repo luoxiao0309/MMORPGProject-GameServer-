@@ -1,5 +1,4 @@
-﻿using GameServer.Common;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Sockets;
@@ -206,19 +205,24 @@ namespace GameServer
                                 //把包体读取到byte数组中
                                 m_ReceiveMs.Read(buffer, 0, currMsgLen);
 
-                                //temp
+
+                                ushort protoCode = 0;
+                                byte[] protoContent = new byte[buffer.Length -2];
+
                                 //这里的buffer就是我们拆分的数据包
                                 using (MMO_MemoryStream ms2 = new MMO_MemoryStream(buffer))
                                 {
-                                    string msg = ms2.ReadUTF8String();
-                                    Console.WriteLine("接收的消息是 "+msg);
+                                    protoCode = ms2.ReadUShort();
+                                    ms2.Read(protoContent,0,protoContent.Length);
                                 }
-
-                                //temp
-                                using (MMO_MemoryStream ms = new MMO_MemoryStream())
+                                
+                                //测试接收协议
+                                if(protoCode == ProtoCodeDef.Test)
                                 {
-                                    ms.WriteUTF8String(string.Format("服务器时间 " + DateTime.Now.ToString()));
-                                    this.SendMsg(ms.ToArray());
+                                    TestProto proto = TestProto.GetProto(protoContent);
+                                    Console.WriteLine("protoName = "+proto.Name);
+                                    Console.WriteLine("protoCode = " + proto.ProtoCode);
+                                    Console.WriteLine("price = " + proto.Price);
                                 }
 
                                 //处理剩余字节长度
