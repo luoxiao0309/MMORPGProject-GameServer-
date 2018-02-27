@@ -46,6 +46,7 @@
     <Compile Include="Common\MMO_MemoryStream.cs" />
     <Compile Include="Common\EventDispatcher.cs" />
     <Compile Include="Common\IProto.cs" />
+    <Compile Include="Common\Crc16.cs" />
     <Compile Include="DBModel\MailDBModel.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -54,6 +55,22 @@
     <Compile Include="Role.cs" />
     <Compile Include="RoleMgr.cs" />
     <Compile Include="Common\Singleton.cs" />
+    <Compile Include="Common\SecurityUtil.cs" />
+    <Compile Include="Common\ZlibHelper.cs" />
+    <Compile Include="Common\zlib_NET_104\Adler32.cs" />
+    <Compile Include="Common\zlib_NET_104\Deflate.cs" />
+    <Compile Include="Common\zlib_NET_104\InfBlocks.cs" />
+    <Compile Include="Common\zlib_NET_104\InfCodes.cs" />
+    <Compile Include="Common\zlib_NET_104\Inflate.cs" />
+    <Compile Include="Common\zlib_NET_104\InfTree.cs" />
+    <Compile Include="Common\zlib_NET_104\StaticTree.cs" />
+    <Compile Include="Common\zlib_NET_104\SupportClass.cs" />
+    <Compile Include="Common\zlib_NET_104\Tree.cs" />
+    <Compile Include="Common\zlib_NET_104\ZInputStream.cs" />
+    <Compile Include="Common\zlib_NET_104\Zlib.cs" />
+    <Compile Include="Common\zlib_NET_104\ZOutputStream.cs" />
+    <Compile Include="Common\zlib_NET_104\ZStream.cs" />
+    <Compile Include="Common\zlib_NET_104\ZStreamException.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

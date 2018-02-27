@@ -37,6 +37,9 @@ namespace GameServer
 
         //检查队列的委托
         private Action m_CheckSendQueue;
+
+        //压缩数组的长度界限
+        private const int m_CompressLen = 200;
         #endregion
 
 
@@ -86,10 +89,30 @@ namespace GameServer
         private byte[] MakeData(byte[] data)
         {
             byte[] retBuffer = null;
+
+            //1、对数据进行压缩检测
+            bool isCompress = data.Length > m_CompressLen ? true : false;
+            if (isCompress)
+            {
+                data = ZlibHelper.CompressBytes(data);
+            }
+
+            //2、先异或
+            data = SecurityUtil.Xor(data);
+
+            //3、计算Crc校验值
+            ushort crc = Crc16.CalculateCrc16(data);
+
             using (MMO_MemoryStream ms = new MMO_MemoryStream())
             {
-                ms.WriteUShort((ushort)(data.Length));
+                ms.WriteUShort((ushort)(data.Length + 3));
+
+                ms.WriteBool(isCompress);
+
+                ms.WriteUShort(crc);
+
                 ms.Write(data, 0, data.Length);
+
                 retBuffer = ms.ToArray();
             }
 
@@ -177,10 +200,9 @@ namespace GameServer
                     m_ReceiveMs.Write(m_ReceiveBuffer, 0, len);
 
                     //byte[] buffer = m_ReceiveMs.ToArray();
-
                     //如果缓存数据流的长度 大于 2 说明至少有个不完整的包过来
                     //我们客户端封装数据包 用的ushort 长度就是2
-                    if(m_ReceiveMs.Length > 2)
+                    if (m_ReceiveMs.Length > 2)
                     {
                         //循环拆分数据包
                         while (true)
@@ -206,21 +228,49 @@ namespace GameServer
                                 //把包体读取到byte数组中
                                 m_ReceiveMs.Read(buffer, 0, currMsgLen);
 
+                                //============================================================
 
-                                ushort protoCode = 0;
-                                byte[] protoContent = new byte[buffer.Length -2];
+                                //异或之后的数组
+                                byte[] bufferNew = new byte[buffer.Length - 3];
 
-                                //这里的buffer就是我们拆分的数据包
-                                using (MMO_MemoryStream ms2 = new MMO_MemoryStream(buffer))
+                                bool isCompress = false;
+                                ushort crc = 0;
+
+
+                                using (MMO_MemoryStream ms = new MMO_MemoryStream(buffer))
                                 {
-                                    protoCode = ms2.ReadUShort();
-                                    ms2.Read(protoContent,0,protoContent.Length);
+                                    isCompress = ms.ReadBool();
+                                    crc = ms.ReadUShort();
+                                    ms.Read(bufferNew, 0, bufferNew.Length);
+
                                 }
 
-                                //将接收的数据协议进行分发
-                                EventDispatcher.Instance.Dispatch(protoCode,m_Role,protoContent);
+                                //1、CRC 计算
+                                ushort newCrc = Crc16.CalculateCrc16(bufferNew);
+                                if (newCrc == crc)
+                                {
+                                    //异或得到原始数据
+                                    bufferNew = SecurityUtil.Xor(bufferNew);
 
+                                    if (isCompress)
+                                    {
+                                        bufferNew = ZlibHelper.DeCompressBytes(bufferNew);
+                                    }
 
+                                    ushort protoCode = 0;
+                                    byte[] protoContent = new byte[bufferNew.Length - 2];
+
+                                    //这里的buffer就是我们拆分的数据包
+                                    using (MMO_MemoryStream ms2 = new MMO_MemoryStream(bufferNew))
+                                    {
+                                        protoCode = ms2.ReadUShort();
+                                        ms2.Read(protoContent, 0, protoContent.Length);
+                                    }
+
+                                    //将接收的数据协议进行分发
+                                    EventDispatcher.Instance.Dispatch(protoCode, m_Role, protoContent);
+
+                                }
 
 
 
