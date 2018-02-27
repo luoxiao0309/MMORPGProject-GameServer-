@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Common;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Sockets;
@@ -215,15 +216,13 @@ namespace GameServer
                                     protoCode = ms2.ReadUShort();
                                     ms2.Read(protoContent,0,protoContent.Length);
                                 }
-                                
-                                //测试接收协议
-                                if(protoCode == ProtoCodeDef.Test)
-                                {
-                                    TestProto proto = TestProto.GetProto(protoContent);
-                                    Console.WriteLine("protoName = "+proto.Name);
-                                    Console.WriteLine("protoCode = " + proto.ProtoCode);
-                                    Console.WriteLine("price = " + proto.Price);
-                                }
+
+                                //将接收的数据协议进行分发
+                                EventDispatcher.Instance.Dispatch(protoCode,m_Role,protoContent);
+
+
+
+
 
                                 //处理剩余字节长度
                                 int remainLen = (int)(m_ReceiveMs.Length - currFullMsgLen);

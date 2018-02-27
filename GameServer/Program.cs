@@ -1,4 +1,5 @@
-﻿using System;
+﻿using GameServer.DBModel;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -32,7 +33,10 @@ namespace GameServer
             Thread mThread = new Thread(ListenClientCallBack);
             mThread.Start();
 
+            MailDBModel.Instance.Init();
+
             Console.ReadLine();
+
         }
 
         /// <summary>
